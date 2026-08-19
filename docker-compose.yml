@@ -1,0 +1,45 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: snj-dwh-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: adminpassword
+      POSTGRES_DB: datawarehouse
+    ports:
+      - "5432:5432"
+    volumes:
+      - snj_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "admin"]
+      interval: 5s
+      retries: 5
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: snj-dwh-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8081:80"
+    depends_on:
+      - postgres
+
+  app:
+    build: .
+    container_name: snj-dwh-nodejs-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      DATABASE_URL: postgres://admin:adminpassword@postgres:5432/datawarehouse
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  snj_pgdata:
